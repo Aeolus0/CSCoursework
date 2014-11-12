@@ -1,0 +1,8 @@
+-vCO workflow for each type of node
+	- 4 core 8gb RAM 50 GB disk 2 Nic's (NAT and Mgmt) Controller
+	- 4 core 2gb RAM 50 GB disk 4 Nic's (NAT Mgmt Instance Tunnels) Network
+	- X.X cpu/Core xGB RAM XGB disk 3 Nic's (NAT Mgmt Instance Tunnels) Compute
+-Ansible
+	- Controller, network packages and setup
+		- Nagios, htop, tmux, screen, pastebinit
+
