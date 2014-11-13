@@ -1,0 +1,12 @@
+---
+- hosts: All
+  remote_user: root
+  tasks:
+    # Begin default apps
+    apt: name={{items}} state=present
+    with_items:
+      - htop
+      - tmux
+      - screen
+      - pastebinit
+    # End generalized
