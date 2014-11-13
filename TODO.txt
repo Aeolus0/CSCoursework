@@ -5,4 +5,6 @@
 -Ansible
 	- Controller, network packages and setup
 		- Nagios, htop, tmux, screen, pastebinit
+-Python
+	- Write script to invoke Ansible scripts with the appropriate params
 
