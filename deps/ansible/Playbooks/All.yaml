@@ -2,7 +2,12 @@
 - hosts: All
   remote_user: root
   tasks:
-    # Begin default apps
+   # Boilerplate stuff
+    apt: upgrade_cache=yes
+    apt: upgrade=yes
+    apt: upgrade=dist
+   # End boilerplate stuff 
+   # Begin default apps
     apt: name={{items}} state=present
     with_items:
       - htop
