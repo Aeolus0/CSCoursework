@@ -16,12 +16,21 @@
     apt: upgrade=dist
     #Openstack Prereq END
     #Openstack Database installation and config
-    apt: name={{items}} state=present
+    debconf:
+      name: mariadb-server-5.5
+      question: "{{ item }}"
+      value: "{{ DATABASE_PASS }}"
+      vtype: password
+    with_items:
+      - mysql-server/root_password
+      - mysql-server/root_password_again
+    apt: name={{ item }} state=present
     with_items:
       - mariadb-server
       - python-mysqldb
     template: src= dest=/etc/mysql/my.cnf
-    #TODO: use the debconf module to give a password for mysql
+    #TODO: use the debconf module to give a password for mariadb
+
     # Update /etc/mysql/my.cnf with;
         # [mysqld]
 	# ...

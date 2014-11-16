@@ -8,7 +8,7 @@
     apt: upgrade=dist
    # End boilerplate stuff 
    # Begin default apps
-    apt: name={{items}} state=present
+    apt: name={{ item }} state=present
     with_items:
       - htop
       - tmux
