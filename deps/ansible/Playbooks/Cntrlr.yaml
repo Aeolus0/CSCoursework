@@ -1,4 +1,5 @@
----
+
+-isDf--
 - hosts: Controllers
   remote_user: root
   tasks:
@@ -40,6 +41,7 @@
 	# collation-server = utf8_general_ci
 	# init-connect = 'SET NAMES utf8'
 	# character-set-server = utf8
+  # TODO: add the password to my.cnf to i don't have to auth
     service: name=mysql state=restarted
     shell: mysql_secure_installation
     #Openstack DB END
@@ -48,6 +50,7 @@
     shell: rabbitmqctl change_password guest {{RABBIT_PASS}}
     #For production environments, you should create a unique account with suitable password. For more information on securing the message broker, see the documentation.
 	#If you decide to create a unique account with suitable password for your test environment, you must configure the rabbit_userid and rabbit_password keys in the configuration file of each OpenStack service that uses the message broker.
+    mysql_db: login_user=root login_password={{ DATABASE_PASS }} name=keystone state=present
 
 
 
