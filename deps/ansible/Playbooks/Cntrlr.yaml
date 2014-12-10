@@ -6,9 +6,11 @@
     #TODO: network (NIC) config
     apt: name=ntp state=present
     template: src=  dest=/etc/ntp.conf 
-    		# 	  NTP.conf with server {{NTP_SERVER}} iburst
+    		# 	  NTP.conf with 
+        #server {{NTP_SERVER}} iburst
 				  # restrict -4 default kod notrap nomodify
       #             restrict -6 default kod notrap nomodify
+      # to a temp dir on server, then copy it over
     service: name=ntp state=restarted
     #Openstack Prereq packages
     apt: name=python-software-properties state=present
@@ -47,10 +49,92 @@
     #Openstack DB END
     #RabbitMQ (Message Broker) setup
     apt: name=rabbitmq-server state=present
-    shell: rabbitmqctl change_password guest {{RABBIT_PASS}}
+    shell: rabbitmqctl change_password guest {{ RABBIT_PASS }}
     #For production environments, you should create a unique account with suitable password. For more information on securing the message broker, see the documentation.
 	#If you decide to create a unique account with suitable password for your test environment, you must configure the rabbit_userid and rabbit_password keys in the configuration file of each OpenStack service that uses the message broker.
     mysql_db: login_user=root login_password={{ DATABASE_PASS }} name=keystone state=present
+    #Push a .sql file with;
+    #GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'localhost' IDENTIFIED BY ' {{ KEYSTONE_DBPASS }}';
+    #GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'%' IDENTIFIED BY ' {{ KEYSTONE_DBPASS }}';
+    #onto the system in a temp folder
+    #as well as a sed script to replace the {{ KEYSTONE_DBPASS }}
+    apt: name={{ item }} state=present
+    with_items:
+      - keystone
+      - python-keystoneclient
+    # Push a new /etc/keystone/keystone.conf
+    # With
+    # [DEFAULT]
+    # admin_token = {{ ADMIN_TOKEN }}
+    # verbose = True
+    # [database]
+    # connection = mysql://keystone:{{ KEYSTONE_DBPASS }}@controller/keystone
+    # [token]
+    # provider = keystone.token.providers.uuid.Provider
+    # driver = keystone.token.persistence.backends.sql.Token
+    shell: su -s /bin/sh -c "keystone-manage db_sync" keystone
+    service: name=keystone state=restarted
+    # Remove SQLite db that's used by defualt
+    shell: rm -f /var/lib/keystone/keystone.db
+    # Add cron job to flush tokens
+    shell: (crontab -l -u keystone 2>&1 | grep -q token_flush) || echo '@hourly /usr/bin/keystone-manage token_flush >/var/log/keystone/keystone-tokenflush.log 2>&1' >> /var/spool/cron/crontabs/keystone
+    shell: export OS_SERVICE_TOKEN={{ ADMIN_TOKEN }}
+    shell: export OS_SERVICE_ENDPOINT=http://controller:35357/v2.0
+    shell: keystone tenant-create --name admin --description "Admin Tenant"
+    shell: keystone user-create --name admin --pass {{ ADMIN_PASS }} --email {{ EMAIL_ADDRESS }}
+    shell: keystone role-create --name admin
+    shell: keystone user-role-add --tenant admin --user admin --role admin
+    shell: keystone role-create --name _member_
+    shell: keystone user-role-add --tenant admin --user admin --role _member_
+    shell: keystone tenant-create --name service --description "Service Tenant"
+    shell: keystone service-create --name keystone --type identity --description "OpenStack Identity"    
+    shell: keystone endpoint-create --service-id $(keystone service-list | awk '/ identity / {print $2}') --publicurl http://controller:5000/v2.0 --internalurl http://controller:5000/v2.0 --adminurl http://controller:35357/v2.0 --region {{ REGION }}
+    shell: unset OS_SERVICE_TOKEN OS_SERVICE_ENDPOINT
+    shell: keystone --os-tenant-name admin --os-username admin --os-password {{ ADMIN_PASS }} --os-auth-url http://controller:35357/v2.0 token-get
+    shell: keystone --os-tenant-name admin --os-username admin --os-password {{ ADMIN_PASS }} --os-auth-url http://controller:35357/v2.0 tenant-list
+    # To create the scripts
 
 
+    # Edit the admin-openrc.sh file and add the following content:
 
+
+    # export OS_TENANT_NAME=admin
+    # export OS_USERNAME=admin
+    # export OS_PASSWORD= {{ ADMIN_PASS }}
+    # export OS_AUTH_URL=http://controller:35357/v2.0
+    # Replace ADMIN_PASS with the password you chose for the admin user in the Identity service.
+
+    # Edit the demo-openrc.sh file and add the following content:
+
+    # export OS_TENANT_NAME=demo
+    # export OS_USERNAME=demo
+    # export OS_PASSWORD={{ DEMO_PASS }}
+    # export OS_AUTH_URL=http://controller:5000/v2.0
+    # Replace DEMO_PASS with the password you chose for the demo user in the Identity service.
+
+    # [Note]  Identity ports
+    # Note the two different ports used above. Port 35357 is used for administrative functions only. Port 5000 is for normal user functions and is the most commonly used.
+
+ 
+    # To load client environment scripts
+
+    # To run clients as a certain tenant and user, you can simply load the associated client environment script prior to running them. For example, to load the location of the Identity service and admin tenant and user credentials:
+
+    # $ source admin-openrc.sh
+    mysql_db: login_user=root login_password={{ DATABASE_PASS }} name=glance state=present
+    #Push a .sql file with;
+    #GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'localhost' IDENTIFIED BY ' {{ GLANCE_DBPASS }}';
+    #GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'%' IDENTIFIED BY ' {{ GLANCE_DBPASS }}';
+    #onto the system in a temp folder
+    #as well as a sed script to replace the {{ GLANCE_DBPASS }}
+    shell: source admin-openrc.sh
+    shell: keystone user-create --name glance --pass {{ GLANCE_PASS }}
+    shell: keystone user-role-add --user glance --tenant service --role admin
+    shell: keystone service-create --name glance --type image --description "OpenStack Image Service"
+    shell: keystone endpoint-create --service-id $(keystone service-list | awk '/ image / {print $2}') --publicurl http://controller:9292 --internalurl http://controller:9292 --adminurl http://controller:9292 --region {{ REGION }}
+    apt: name={{ item }} state=present
+    with_items:
+        - glance
+        - python-glanceclient
+    # do config with http://docs.openstack.org/juno/install-guide/install/apt/content/glance-install.html
+    shell: su -s /bin/sh -c "glance-manage db_sync" glance
