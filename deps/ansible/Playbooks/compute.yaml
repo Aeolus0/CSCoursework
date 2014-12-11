@@ -1,0 +1,70 @@
+---
+- hosts: Controllers
+  remote_user: root
+  tasks:
+  	apt: name={{ items }} state=present
+  	with_items:
+  		- nova-compute
+  		- sysfsutils
+#   		Edit the /etc/nova/nova.conf file and complete the following actions:
+
+# In the [DEFAULT] section, configure RabbitMQ message broker access:
+
+# [DEFAULT]
+# ...
+# rpc_backend = rabbit
+# rabbit_host = controller
+# rabbit_password = RABBIT_PASS
+# Replace RABBIT_PASS with the password you chose for the guest account in RabbitMQ.
+
+# In the [DEFAULT] and [keystone_authtoken] sections, configure Identity service access:
+
+# [DEFAULT]
+# ...
+# auth_strategy = keystone
+ 
+# [keystone_authtoken]
+# ...
+# auth_uri = http://controller:5000/v2.0
+# identity_uri = http://controller:35357
+# admin_tenant_name = service
+# admin_user = nova
+# admin_password = NOVA_PASS
+# Replace NOVA_PASS with the password you chose for the nova user in the Identity service.
+
+# [Note]	Note
+# Comment out any auth_host, auth_port, and auth_protocol options because the identity_uri option replaces them.
+
+# In the [DEFAULT] section, configure the my_ip option:
+
+# [DEFAULT]
+# ...
+# my_ip = MANAGEMENT_INTERFACE_IP_ADDRESS
+# Replace MANAGEMENT_INTERFACE_IP_ADDRESS with the IP address of the management network interface on your compute node, typically 10.0.0.31 for the first node in the example architecture.
+
+# In the [DEFAULT] section, enable and configure remote console access:
+
+# [DEFAULT]
+# ...
+# vnc_enabled = True
+# vncserver_listen = 0.0.0.0
+# vncserver_proxyclient_address = MANAGEMENT_INTERFACE_IP_ADDRESS
+# novncproxy_base_url = http://controller:6080/vnc_auto.html
+# The server component listens on all IP addresses and the proxy component only listens on the management interface IP address of the compute node. The base URL indicates the location where you can use a web browser to access remote consoles of instances on this compute node.
+
+# Replace MANAGEMENT_INTERFACE_IP_ADDRESS with the IP address of the management network interface on your compute node, typically 10.0.0.31 for the first node in the example architecture.
+
+# [Note]	Note
+# If the web browser to access remote consoles resides on a host that cannot resolve the controller hostname, you must replace controller with the management interface IP address of the controller node.
+
+# In the [glance] section, configure the location of the Image Service:
+
+# [glance]
+# ...
+# host = controller
+# (Optional) To assist with troubleshooting, enable verbose logging in the [DEFAULT] section:
+
+
+# [DEFAULT]
+# ...
+# verbose = True
